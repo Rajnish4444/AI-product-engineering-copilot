@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Next.js
+.next
+out
+build
+
+# Env files (never commit)
+.env
+.env.local
+.env.*.local
+
+# Testing / eval artifacts
+coverage
+.vitest-cache
+eval-results/
+
+# IDE
+.vscode/*
+!.vscode/settings.json.example
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# GitHub App private keys (never commit)
+*.pem
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Local Claude Code state
+.claude/settings.local.json
