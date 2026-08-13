@@ -4,6 +4,11 @@
  *
  * Effort is a t-shirt size — deliberately coarse. If you need finer estimates
  * you are past the point where an LLM should be estimating.
+ *
+ * (Aug 2026 exception: loosened `.min(1)` on inner strings and dropped the
+ * kebab-case regex on `id` after Gemini Flash occasionally produced ids with
+ * underscores/spaces. Normalize to kebab-case at issue-creation time instead
+ * of failing the whole generation.)
  */
 
 import { z } from "zod";
@@ -15,15 +20,13 @@ export const Task = z.object({
   id: z
     .string()
     .min(1)
-    .regex(/^[a-z0-9-]+$/, "IDs must be kebab-case slugs")
-    .describe("Short kebab-case slug, e.g. 'add-theme-toggle'"),
+    .describe("Short slug, e.g. 'add-theme-toggle'. Kebab-case preferred; will be normalized"),
   title: z.string().min(1).describe("Imperative title, ≤ 60 chars"),
   description: z
     .string()
-    .min(1)
     .describe("Two to four sentences on what this task delivers and why"),
   acceptance_criteria: z
-    .array(z.string().min(1))
+    .array(z.string())
     .min(1)
     .describe("Bullet-list of observable outcomes that mark the task done"),
   effort: Effort.describe(
