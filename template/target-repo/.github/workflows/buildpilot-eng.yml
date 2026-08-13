@@ -1,0 +1,72 @@
+name: BuildPilot Eng
+
+on:
+  workflow_dispatch:
+    inputs:
+      dispatch_payload_json:
+        description: BuildPilot DispatchPayload.v1 as a JSON string
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: buildpilot-eng-${{ github.event.inputs.dispatch_payload_json }}
+  cancel-in-progress: false
+
+jobs:
+  parse:
+    name: Parse dispatch payload
+    runs-on: ubuntu-latest
+    outputs:
+      runtime: ${{ steps.parse.outputs.runtime }}
+      task_id: ${{ steps.parse.outputs.task_id }}
+      brief_json: ${{ steps.parse.outputs.brief_json }}
+      cost_cap_usd: ${{ steps.parse.outputs.cost_cap_usd }}
+      ref: ${{ steps.parse.outputs.ref }}
+    steps:
+      - id: parse
+        env:
+          PAYLOAD: ${{ inputs.dispatch_payload_json }}
+        run: |
+          set -euo pipefail
+          runtime=$(echo "$PAYLOAD" | jq -r '.runtime')
+          task_id=$(echo "$PAYLOAD" | jq -r '.task_id')
+          brief_json=$(echo "$PAYLOAD" | jq -c '.brief')
+          cost_cap_usd=$(echo "$PAYLOAD" | jq -r '.cost_cap_usd')
+          ref=$(echo "$PAYLOAD" | jq -r '.repo.ref')
+          echo "runtime=$runtime" >> "$GITHUB_OUTPUT"
+          echo "task_id=$task_id" >> "$GITHUB_OUTPUT"
+          echo "brief_json=$brief_json" >> "$GITHUB_OUTPUT"
+          echo "cost_cap_usd=$cost_cap_usd" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+  code:
+    name: Run coding agent (${{ needs.parse.outputs.runtime }})
+    needs: parse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.parse.outputs.ref }}
+          fetch-depth: 0
+
+      - name: Run claude-code adapter
+        if: needs.parse.outputs.runtime == 'claude-code'
+        uses: ./.github/actions/claude-code-adapter
+        with:
+          brief_json: ${{ needs.parse.outputs.brief_json }}
+          task_id: ${{ needs.parse.outputs.task_id }}
+          cost_cap_usd: ${{ needs.parse.outputs.cost_cap_usd }}
+          base_ref: ${{ needs.parse.outputs.ref }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Unsupported runtime
+        if: needs.parse.outputs.runtime != 'claude-code'
+        run: |
+          echo "::error::Runtime '${{ needs.parse.outputs.runtime }}' is not yet supported in this template. See BuildPilot v1.1 roadmap."
+          exit 1
