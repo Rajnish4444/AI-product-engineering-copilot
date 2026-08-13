@@ -8,7 +8,7 @@
 
 The engineering-side workload — take a task, edit files, run tests, open a PR — is exactly the problem that Claude Code, Gemini CLI, OpenCode, Aider, and Cursor Agent all solve. Each has strengths, weaknesses, and different pricing/free-tier models. The landscape shifts monthly.
 
-Committing hard to one runtime creates a specific risk for a portfolio project: if the interviewer asks "what if a user only has a Gemini free tier?" — or "what if Anthropic deprecates the Claude Code Action?" — the answer must be "we swap the runtime, not rebuild the product."
+Committing hard to one runtime creates a real customer-facing risk: if a user only has a Gemini free tier, or if Anthropic deprecates the Claude Code Action next quarter, the answer must be "swap the runtime, not rebuild the product." Every serious LLM-backed product I have seen underestimate this has paid for it later with a scrambled migration.
 
 ADR-0002 solved this for the PM side (provider abstraction). This ADR does the analogous thing for the eng side (runtime abstraction).
 
@@ -49,7 +49,7 @@ The main workflow (`.github/workflows/buildpilot-eng.yml`) is a thin dispatcher 
 
 ## Alternatives considered
 
-- **Claude Code Action only.** Rejected. Matches our original tech steer but fails the model-portability requirement. A single interviewer question about pricing/vendor risk would expose the fragility.
+- **Claude Code Action only.** Rejected. Matches the original tech steer but fails the model-portability requirement. A single change in Anthropic pricing or availability would expose the fragility.
 - **Roll our own agent loop from scratch.** Rejected for the MVP: too much code, insufficient time, and it competes with tools maintained by teams of engineers. Kept as the fallback (`raw-api-adapter`) for cases where vendor runtimes are unavailable — where the smaller feature set is acceptable.
 - **A hosted runtime we operate.** Rejected: violates ADR-0001.
 - **Devin / other paid autonomous engineers.** Rejected for v1: cost precludes free-tier operation. Adapter interface leaves the door open.

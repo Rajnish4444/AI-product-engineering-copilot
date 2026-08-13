@@ -13,7 +13,7 @@ BuildPilot's viability depends on model availability. Any single provider can:
 - Become geographically unavailable to a demo audience.
 - Price a feature out of reach.
 
-Additionally, the interview narrative for an AI-Native Tech Lead role requires demonstrating that we treat model choice as a **configuration decision, not a codebase decision**. Model portability is table stakes.
+Additionally, treating model choice as a **configuration decision, not a codebase decision** is table stakes for any LLM-backed product I want to keep shipping over a multi-year horizon. Vendors change pricing, deprecate models, and go offline. The abstraction has to absorb those disruptions without touching feature code.
 
 ## Decision
 

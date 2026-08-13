@@ -12,7 +12,7 @@ BuildPilot is an agentic system with write access to real repositories and paid 
 2. **Repository damage.** An overconfident agent could force-push, close PRs, delete branches, or leak secrets.
 3. **Cost blowout.** A single misconfigured session (e.g., an infinite tool-use loop) can burn a month of free-tier credit in an hour, killing the demo.
 
-Interviewers for AI-Native Tech Lead roles specifically probe for whether these have been thought through. Silent trust in the model is not an acceptable answer.
+Any serious review of an agentic system probes for whether these three risks have been thought through. Silent trust in the model is not an acceptable answer, and the price of getting it wrong is a leaked key, a bricked repo, or a bill I did not want.
 
 ## Decision
 
@@ -61,7 +61,7 @@ Any future feature that would need these is out of scope; if requested, it will 
 - Blast radius per session is bounded and known.
 - A single bad demo cannot exhaust a month of free-tier credit.
 - Prompt injection is a contained risk: the worst outcome is a bad PR you can close, not an agent that force-pushed.
-- The narrative for interviews is precise: "here is what we allow, here is what we forbid, here is why."
+- The security posture is precise and explainable: "here is what we allow, here is what we forbid, here is why." Same paragraph works for a code review, a customer trust conversation, or an auditor.
 
 ### Negative
 
@@ -75,7 +75,7 @@ Any future feature that would need these is out of scope; if requested, it will 
 
 ## Alternatives considered
 
-- **Trust the model.** Rejected. Irresponsible, and a single failed demo destroys interview credibility.
+- **Trust the model.** Rejected. Irresponsible, and a single failed run destroys user trust for good — this is not a class of bug we should be discovering in production.
 - **Third-party guardrail products** (LlamaGuard, Nvidia NeMo Guardrails, Protect AI). Deferred: overkill for MVP scope, adds vendors. Reconsider if we ship real users.
 - **Sandboxed browser tools only.** Not applicable — the eng runtime already runs in a GitHub-hosted sandbox, which is the strongest sandbox available to us.
 - **Cost caps only, no scope caps.** Rejected. Caps prevent bill shock but not repo damage; both are needed.

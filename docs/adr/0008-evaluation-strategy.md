@@ -72,7 +72,7 @@ An eval passes only if the prompt correctly handles adversarial inputs (usually:
 - Prompt regressions and provider regressions become catchable events, not surprises.
 - Adding a provider (ADR-0002) has a clear success criterion: pass all evals.
 - The golden set doubles as documentation of intended behavior for future contributors.
-- LLM-as-judge with a cross-provider judge model is a plausible answer to interviewer questions about bias and calibration.
+- LLM-as-judge with a cross-provider judge model addresses the shared-blindspot-bias critique head-on, and gives us calibration data over time.
 
 ### Negative
 

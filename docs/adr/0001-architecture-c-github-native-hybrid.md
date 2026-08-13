@@ -8,7 +8,7 @@
 
 BuildPilot is an AI Product & Engineering Copilot. Its workload is bimodal: short interactive PM-side calls (idea → PRD → tasks) and long-running eng-side calls (task → PR). We have two hard constraints:
 
-1. **No infrastructure we operate.** No database we own, no queue we run, no worker we babysit. This is both a cost constraint (free tiers only) and a narrative choice for a portfolio project.
+1. **No infrastructure we operate.** No database we own, no queue we run, no worker we babysit. This is both a cost constraint (free tiers only) and a deliberate architectural choice: everything the product needs is either a client concern, a Vercel-managed function, or a GitHub primitive we compose.
 2. **First-class product UI.** The demo is a conversation-plus-artifact experience, not a series of GitHub issue comments.
 
 Three candidate architectures were evaluated:

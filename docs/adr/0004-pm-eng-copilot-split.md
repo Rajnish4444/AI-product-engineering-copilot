@@ -62,7 +62,7 @@ The eng runtime is a pure function of this payload plus the repo state — no hi
 - We use the best tool for each side without either compromising.
 - Failures are isolated: a botched eng run does not corrupt the PRD; a bad PRD does not launch an eng run (validation gate).
 - The handoff is documented as a versioned schema — third parties could implement either side.
-- Interview narrative is crisp: "I bridge the PM–Eng seam by treating each side as a first-class subsystem."
+- Positioning is crisp: BuildPilot bridges the PM–Eng seam by treating each side as a first-class subsystem. Easy to explain to a buyer, a teammate, or a future contributor.
 
 ### Negative
 
