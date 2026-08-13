@@ -8,12 +8,38 @@
  * from evals, tests, and future non-HTTP surfaces without change.
  */
 
+import { APICallError, NoObjectGeneratedError } from "ai";
 import { getProvider } from "@/lib/providers/registry";
 import { ProviderConfigError, type ProviderUsage } from "@/lib/providers";
 import { loadPrompt } from "@/lib/prompts/loader";
 import { PRD as PRDSchema, type PRD } from "@/lib/schemas/prd.v1";
 import { TaskList as TaskListSchema, type TaskList } from "@/lib/schemas/task-list.v1";
 import { getCostCaps } from "@/lib/cost/caps";
+
+function classifyError(err: unknown): { code: string; message: string } {
+  if (err instanceof ProviderConfigError) {
+    return { code: "provider_config", message: err.message };
+  }
+  if (NoObjectGeneratedError.isInstance(err)) {
+    return {
+      code: "schema_validation_failed",
+      message:
+        "The model produced output that did not match the expected schema. This can happen with smaller models on nested schemas — try again, or set BUILDPILOT_PROVIDER to a stronger provider (e.g. anthropic, github-models).",
+    };
+  }
+  if (APICallError.isInstance(err)) {
+    const status = (err as unknown as { statusCode?: number }).statusCode;
+    return {
+      code: "provider_api_error",
+      message: `Provider API error (HTTP ${status ?? "?"}): ${err.message}`,
+    };
+  }
+  console.error("[plan] orchestrator error:", err);
+  return {
+    code: "orchestrator_failure",
+    message: err instanceof Error ? err.message : "Unknown error",
+  };
+}
 
 export type PlanInput = {
   idea: string;
@@ -118,20 +144,8 @@ export function streamPlan(input: PlanInput): ReadableStream<Uint8Array> {
 
         controller.close();
       } catch (err) {
-        if (err instanceof ProviderConfigError) {
-          enqueue({
-            type: "error",
-            code: "provider_config",
-            message: err.message,
-          });
-        } else {
-          console.error("[plan] orchestrator error:", err);
-          enqueue({
-            type: "error",
-            code: "orchestrator_failure",
-            message: err instanceof Error ? err.message : "Unknown error",
-          });
-        }
+        const { code, message } = classifyError(err);
+        enqueue({ type: "error", code, message });
         controller.close();
       }
     },
