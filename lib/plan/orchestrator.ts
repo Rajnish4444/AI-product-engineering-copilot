@@ -74,8 +74,8 @@ export function streamPlan(input: PlanInput): ReadableStream<Uint8Array> {
         const provider = getProvider(input.provider);
         const caps = getCostCaps();
 
-        const prdPrompt = await loadPrompt("prd-generator", 1);
-        const taskPrompt = await loadPrompt("task-decomposer", 1);
+        const prdPrompt = await loadPrompt("prd-generator", 2);
+        const taskPrompt = await loadPrompt("task-decomposer", 2);
 
         // ---------- Stage 1: PRD ----------
         const prdStream = provider.streamObject({
