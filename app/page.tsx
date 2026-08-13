@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/brand/logo";
 
 export default function LandingPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-20">
-      <span className="text-xs uppercase tracking-widest text-muted-foreground">
+      <div className="mb-6 inline-flex items-center gap-3 text-primary">
+        <Logo size={48} />
+      </div>
+      <span className="block text-xs uppercase tracking-widest text-muted-foreground">
         AI Product & Engineering Copilot
       </span>
-      <h1 className="mt-4 text-5xl font-semibold tracking-tight">
+      <h1 className="mt-2 text-5xl font-semibold tracking-tight">
         BuildPilot
       </h1>
       <p className="mt-6 max-w-xl text-lg text-muted-foreground">

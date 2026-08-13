@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import {
   listSessions,
@@ -41,10 +42,8 @@ export function AppSidebar({
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-border/50 bg-muted/20 lg:flex">
       <div className="border-b border-border/50 p-4">
-        <div className="mb-4 flex items-baseline gap-2">
-          <span className="text-lg font-semibold tracking-tight">
-            BuildPilot
-          </span>
+        <div className="mb-4 flex items-center gap-2 text-primary">
+          <Logo size={22} wordmark />
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
             v0.1
           </span>
