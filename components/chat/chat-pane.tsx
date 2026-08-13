@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { Send, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { SuggestedPrompts } from "./suggested-prompts";
 import type { PlanStatus } from "./chat-workspace";
 
 interface Props {
@@ -11,15 +14,14 @@ interface Props {
   onSubmit: () => void;
   onCancel: () => void;
   status: PlanStatus;
-  cost: { input: number; output: number; usd: number };
   error: string | null;
 }
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
-  idle: "Idle",
+  idle: "Ready",
   generating_prd: "Streaming PRD",
   generating_tasks: "Decomposing tasks",
-  done: "Ready",
+  done: "Complete",
   error: "Error",
 };
 
@@ -29,74 +31,121 @@ export function ChatPane({
   onSubmit,
   onCancel,
   status,
-  cost,
   error,
 }: Props) {
   const busy = status === "generating_prd" || status === "generating_tasks";
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      e.key === "Enter" &&
+      (e.metaKey || e.ctrlKey) &&
+      !busy &&
+      idea.trim().length > 0
+    ) {
+      e.preventDefault();
+      onSubmit();
+    }
+    if (e.key === "Escape" && busy) {
+      e.preventDefault();
+      onCancel();
+    }
+  }
 
   return (
-    <div className="flex flex-col gap-4">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">BuildPilot</h1>
-        <p className="text-sm text-muted-foreground">
-          Paste a rough idea. Watch a PRD and engineering task list stream out.
-        </p>
-      </header>
-
-      <div className="flex flex-col gap-2">
-        <Textarea
-          value={idea}
-          onChange={(e) => setIdea(e.target.value)}
-          placeholder="e.g. Add dark mode to our settings page, with a toggle that persists per user..."
-          rows={7}
-          disabled={busy}
-        />
-        <div className="flex items-center gap-3">
-          {busy ? (
-            <Button variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-          ) : (
-            <Button
-              onClick={onSubmit}
-              disabled={idea.trim().length === 0}
-            >
-              Generate plan
-            </Button>
-          )}
+    <div className="flex min-h-0 flex-col gap-4">
+      <div>
+        <div className="mb-2 flex items-center gap-2">
+          <h2 className="text-sm font-semibold">Your idea</h2>
           <Badge
             variant={
               status === "error"
                 ? "destructive"
                 : status === "done"
-                ? "default"
-                : "secondary"
+                  ? "default"
+                  : "secondary"
             }
+            className="text-xs"
           >
             {STATUS_LABEL[status]}
           </Badge>
         </div>
+        <Textarea
+          ref={inputRef}
+          value={idea}
+          onChange={(e) => setIdea(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Paste a rough feature idea — a sentence or a paragraph. The PM copilot will turn it into a structured PRD, then break it into engineering tasks."
+          rows={5}
+          disabled={busy}
+          className="resize-none"
+        />
+        <div className="mt-2 flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">
+            <kbd className="rounded border border-border/60 bg-muted px-1 py-0.5 text-[10px]">
+              ⌘/Ctrl + Enter
+            </kbd>{" "}
+            to send ·{" "}
+            <kbd className="rounded border border-border/60 bg-muted px-1 py-0.5 text-[10px]">
+              Esc
+            </kbd>{" "}
+            to cancel
+          </span>
+          {busy ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onCancel}
+              className="gap-1.5"
+            >
+              <X className="h-3.5 w-3.5" />
+              Cancel
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={onSubmit}
+              disabled={idea.trim().length === 0}
+              className="gap-1.5"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Generate plan
+            </Button>
+          )}
+        </div>
       </div>
 
-      {(cost.usd > 0 || busy) && (
-        <div className="text-xs text-muted-foreground">
-          Session: ${cost.usd.toFixed(4)} · {cost.input.toLocaleString()} in ·{" "}
-          {cost.output.toLocaleString()} out
-        </div>
-      )}
-
       {error && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
+        <div className="flex gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>{error}</div>
         </div>
       )}
 
-      <div className="mt-auto space-y-2 text-xs text-muted-foreground">
+      {status === "idle" && !idea.trim() && (
+        <SuggestedPrompts onPick={setIdea} />
+      )}
+
+      <div className="mt-auto space-y-2 border-t border-border/50 pt-4 text-xs leading-relaxed text-muted-foreground">
         <p>
-          <strong>How this works.</strong> Your idea streams through the PM
-          copilot (structured PRD.v1 output), then feeds the task decomposer
-          (TaskList.v1). Both use the ModelProvider abstraction — swap
-          providers via the BUILDPILOT_PROVIDER env var.
+          <strong className="text-foreground">How this works.</strong> Your
+          idea flows through the PM copilot ({" "}
+          <code className="rounded bg-muted px-1 py-0.5 text-[10px]">
+            PRD.v1
+          </code>{" "}
+          structured output), then the task decomposer (
+          <code className="rounded bg-muted px-1 py-0.5 text-[10px]">
+            TaskList.v1
+          </code>
+          ). Both use the ModelProvider abstraction — swap providers with{" "}
+          <code className="rounded bg-muted px-1 py-0.5 text-[10px]">
+            BUILDPILOT_PROVIDER
+          </code>
+          .
         </p>
       </div>
     </div>
