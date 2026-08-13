@@ -25,7 +25,10 @@ import type {
 import { ProviderConfigError } from "./index";
 import { estimateCost as priceEstimate } from "./pricing";
 
-const DEFAULT_MODEL = "gemini-2.5-pro";
+// Google retired `gemini-2.5-pro` and `gemini-2.0-flash` for new keys in
+// Aug 2026; `gemini-2.5-flash` is currently the only viable free-tier target.
+// Restore a distinct cheap-tier when a newer Pro/Ultra becomes available.
+const DEFAULT_MODEL = "gemini-2.5-flash";
 const CHEAP_MODEL = "gemini-2.5-flash";
 
 function client() {
