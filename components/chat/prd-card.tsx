@@ -1,6 +1,14 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { CopyButton } from "./copy-button";
+import { prdToMarkdown } from "@/lib/plan/prd-to-markdown";
 import type { PRD } from "@/lib/schemas/prd.v1";
 
 interface Props {
@@ -12,11 +20,26 @@ export function PrdCard({ prd, streaming }: Props) {
   return (
     <Card className="animate-in fade-in-0 slide-in-from-bottom-2">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span>{prd.title || (streaming ? "Drafting PRD..." : "Untitled")}</span>
-          {streaming && <PulseDot />}
-        </CardTitle>
-        {prd.problem && <CardDescription>{prd.problem}</CardDescription>}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <CardTitle className="flex items-center gap-2">
+              <span className="truncate">
+                {prd.title || (streaming ? "Drafting PRD…" : "Untitled")}
+              </span>
+              {streaming && <PulseDot />}
+            </CardTitle>
+            {prd.problem && (
+              <CardDescription className="mt-1">{prd.problem}</CardDescription>
+            )}
+          </div>
+          {!streaming && prd.title && (
+            <CopyButton
+              text={prdToMarkdown(prd)}
+              label="Copy Markdown"
+              className="shrink-0"
+            />
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6 text-sm">
         {prd.goals && prd.goals.length > 0 && (
@@ -28,6 +51,7 @@ export function PrdCard({ prd, streaming }: Props) {
             </ul>
           </Section>
         )}
+
         {prd.non_goals && prd.non_goals.length > 0 && (
           <Section title="Non-goals">
             <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
@@ -37,35 +61,47 @@ export function PrdCard({ prd, streaming }: Props) {
             </ul>
           </Section>
         )}
+
         {prd.user_stories && prd.user_stories.length > 0 && (
           <Section title="User stories">
             <ul className="space-y-2">
               {prd.user_stories.map((s, i) => (
-                <li key={i} className="rounded-md border border-border/50 bg-muted/30 px-3 py-2">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                    As {s?.as_a}
+                <li
+                  key={i}
+                  className="rounded-md border border-border/50 bg-muted/30 px-3 py-2"
+                >
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                    As {s?.as_a || "…"}
                   </div>
-                  <div>
-                    I want <strong>{s?.i_want}</strong> so that {s?.so_that}.
+                  <div className="mt-0.5">
+                    I want{" "}
+                    <strong className="font-medium">
+                      {s?.i_want || "…"}
+                    </strong>
+                    , so that {s?.so_that || "…"}.
                   </div>
                 </li>
               ))}
             </ul>
           </Section>
         )}
+
         {prd.acceptance_criteria && prd.acceptance_criteria.length > 0 && (
           <Section title="Acceptance criteria">
             <ul className="space-y-2">
               {prd.acceptance_criteria.map((c, i) => (
                 <li key={i} className="text-sm">
-                  <span className="font-medium">Given</span> {c?.given}{" "}
-                  <span className="font-medium">when</span> {c?.when}{" "}
-                  <span className="font-medium">then</span> {c?.then}.
+                  <span className="font-medium">Given</span> {c?.given || "…"}
+                  {" · "}
+                  <span className="font-medium">when</span> {c?.when || "…"}
+                  {" · "}
+                  <span className="font-medium">then</span> {c?.then || "…"}.
                 </li>
               ))}
             </ul>
           </Section>
         )}
+
         {prd.open_questions && prd.open_questions.length > 0 && (
           <Section title="Open questions">
             <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
@@ -80,10 +116,16 @@ export function PrdCard({ prd, streaming }: Props) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
-      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
         {title}
       </h4>
       {children}
