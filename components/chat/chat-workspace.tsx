@@ -1,9 +1,18 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PRD } from "@/lib/schemas/prd.v1";
 import type { TaskList } from "@/lib/schemas/task-list.v1";
 import { streamPlan } from "@/lib/plan/client-reader";
+import {
+  generateSessionId,
+  getSession,
+  saveSession,
+  summarizeIdea,
+  type StoredSession,
+} from "@/lib/session-store/local";
+import { AppSidebar } from "./app-sidebar";
+import { AppHeader } from "./app-header";
 import { ChatPane } from "./chat-pane";
 import { ArtifactViewer } from "./artifact-viewer";
 
@@ -15,15 +24,62 @@ export type PlanStatus =
   | "error";
 
 const emptyCost = { input: 0, output: 0, usd: 0 };
+const DEFAULT_PROVIDER = "google";
+const DEFAULT_MODEL = "gemini-2.5-flash";
 
 export function ChatWorkspace() {
+  const [sessionId, setSessionId] = useState<string>(() => generateSessionId());
   const [idea, setIdea] = useState("");
   const [prd, setPrd] = useState<Partial<PRD> | null>(null);
   const [tasks, setTasks] = useState<Partial<TaskList> | null>(null);
   const [status, setStatus] = useState<PlanStatus>("idle");
   const [cost, setCost] = useState(emptyCost);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Persist a snapshot whenever meaningful state changes.
+  useEffect(() => {
+    if (!idea.trim() && !prd && !tasks) return;
+    const snapshot: StoredSession = {
+      id: sessionId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      idea,
+      provider: DEFAULT_PROVIDER,
+      status,
+      prd: (prd as PRD | null) ?? null,
+      tasks: (tasks as TaskList | null) ?? null,
+      cost,
+      error,
+    };
+    saveSession(snapshot);
+    setRefreshKey((k) => k + 1);
+  }, [sessionId, idea, prd, tasks, status, cost, error]);
+
+  const handleNew = useCallback(() => {
+    abortRef.current?.abort();
+    setSessionId(generateSessionId());
+    setIdea("");
+    setPrd(null);
+    setTasks(null);
+    setCost(emptyCost);
+    setError(null);
+    setStatus("idle");
+  }, []);
+
+  const handleSelectSession = useCallback((id: string) => {
+    const session = getSession(id);
+    if (!session) return;
+    abortRef.current?.abort();
+    setSessionId(session.id);
+    setIdea(session.idea);
+    setPrd(session.prd);
+    setTasks(session.tasks);
+    setCost(session.cost);
+    setError(session.error);
+    setStatus(session.status);
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     setPrd(null);
@@ -82,17 +138,32 @@ export function ChatWorkspace() {
   }, []);
 
   return (
-    <main className="mx-auto grid min-h-dvh max-w-7xl grid-cols-1 gap-6 p-6 lg:grid-cols-[minmax(360px,1fr)_2fr]">
-      <ChatPane
-        idea={idea}
-        setIdea={setIdea}
-        onSubmit={handleSubmit}
-        onCancel={handleCancel}
-        status={status}
-        cost={cost}
-        error={error}
+    <div className="flex h-dvh overflow-hidden">
+      <AppSidebar
+        activeSessionId={sessionId}
+        onSelect={handleSelectSession}
+        onNew={handleNew}
+        refreshKey={refreshKey}
       />
-      <ArtifactViewer prd={prd} tasks={tasks} status={status} />
-    </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <AppHeader
+          provider={DEFAULT_PROVIDER}
+          model={DEFAULT_MODEL}
+          cost={cost}
+          ideaSummary={summarizeIdea(idea, 60)}
+        />
+        <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto p-6 lg:grid-cols-[minmax(360px,1fr)_2fr]">
+          <ChatPane
+            idea={idea}
+            setIdea={setIdea}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            status={status}
+            error={error}
+          />
+          <ArtifactViewer prd={prd} tasks={tasks} status={status} />
+        </div>
+      </div>
+    </div>
   );
 }
