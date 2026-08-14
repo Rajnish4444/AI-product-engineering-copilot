@@ -37,7 +37,7 @@ export async function loadPrompt(
   let raw: string;
   try {
     raw = await fs.readFile(filepath, "utf8");
-  } catch (err) {
+  } catch {
     throw new Error(
       `Prompt ${filename} not found at ${filepath}. Did you bump the version but forget to create the file?`
     );
