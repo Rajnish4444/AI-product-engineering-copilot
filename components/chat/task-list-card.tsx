@@ -7,6 +7,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CopyButton } from "./copy-button";
+import { taskListToMarkdown } from "@/lib/plan/task-list-to-markdown";
 import type { TaskList, Task, Effort } from "@/lib/schemas/task-list.v1";
 
 interface Props {
@@ -41,25 +43,34 @@ export function TaskListCard({ tasks, streaming }: Props) {
   return (
     <Card className="animate-in fade-in-0 slide-in-from-bottom-2">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span>Engineering tasks</span>
-            {streaming && <PulseDot />}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <CardTitle className="flex items-center gap-2">
+              <span>Engineering tasks</span>
+              {streaming && <PulseDot />}
+              {!streaming && list.length > 0 && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {list.length} tasks
+                </span>
+              )}
+            </CardTitle>
             {!streaming && list.length > 0 && (
-              <span className="text-xs font-normal text-muted-foreground">
-                {list.length} tasks
-              </span>
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span>Effort:</span>
+                <EffortPill effort="S" count={efforts.S} />
+                <EffortPill effort="M" count={efforts.M} />
+                <EffortPill effort="L" count={efforts.L} />
+              </div>
             )}
           </div>
           {!streaming && list.length > 0 && (
-            <div className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
-              <span>Effort:</span>
-              <EffortPill effort="S" count={efforts.S} />
-              <EffortPill effort="M" count={efforts.M} />
-              <EffortPill effort="L" count={efforts.L} />
-            </div>
+            <CopyButton
+              text={taskListToMarkdown(tasks)}
+              label="Copy Markdown"
+              className="shrink-0"
+            />
           )}
-        </CardTitle>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {list.map((task, i) => {
