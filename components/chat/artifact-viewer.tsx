@@ -5,24 +5,52 @@ import type { PRD } from "@/lib/schemas/prd.v1";
 import type { TaskList } from "@/lib/schemas/task-list.v1";
 import { PrdCard } from "./prd-card";
 import { TaskListCard } from "./task-list-card";
-import type { PlanStatus } from "./chat-workspace";
+import type { ActiveOp, PlanStatus } from "./chat-workspace";
 
 interface Props {
   prd: Partial<PRD> | null;
   tasks: Partial<TaskList> | null;
   status: PlanStatus;
+  activeOp: ActiveOp;
+  onRefinePrd: (feedback: string) => void;
+  onRefineTasks: (feedback: string) => void;
+  onCancelRefine: () => void;
 }
 
-export function ArtifactViewer({ prd, tasks, status }: Props) {
+export function ArtifactViewer({
+  prd,
+  tasks,
+  status,
+  activeOp,
+  onRefinePrd,
+  onRefineTasks,
+  onCancelRefine,
+}: Props) {
   if (!prd && status === "idle") return <EmptyState />;
+
+  const busy =
+    status === "generating_prd" || status === "generating_tasks";
 
   return (
     <div className="flex min-w-0 flex-col gap-4 overflow-y-auto pb-6 lg:pr-1">
-      {prd && <PrdCard prd={prd} streaming={status === "generating_prd"} />}
+      {prd && (
+        <PrdCard
+          prd={prd}
+          streaming={status === "generating_prd"}
+          busy={busy}
+          isRefiningThis={activeOp === "refine_prd"}
+          onRefine={onRefinePrd}
+          onCancelRefine={onCancelRefine}
+        />
+      )}
       {tasks && (
         <TaskListCard
           tasks={tasks}
           streaming={status === "generating_tasks"}
+          busy={busy}
+          isRefiningThis={activeOp === "refine_tasks"}
+          onRefine={onRefineTasks}
+          onCancelRefine={onCancelRefine}
         />
       )}
       {status === "done" && (

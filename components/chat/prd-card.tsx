@@ -8,15 +8,27 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CopyButton } from "./copy-button";
+import { RefineInput } from "./refine-input";
 import { prdToMarkdown } from "@/lib/plan/prd-to-markdown";
 import type { PRD } from "@/lib/schemas/prd.v1";
 
 interface Props {
   prd: Partial<PRD>;
   streaming: boolean;
+  busy: boolean;
+  isRefiningThis: boolean;
+  onRefine: (feedback: string) => void;
+  onCancelRefine: () => void;
 }
 
-export function PrdCard({ prd, streaming }: Props) {
+export function PrdCard({
+  prd,
+  streaming,
+  busy,
+  isRefiningThis,
+  onRefine,
+  onCancelRefine,
+}: Props) {
   return (
     <Card className="animate-in fade-in-0 slide-in-from-bottom-2">
       <CardHeader>
@@ -110,6 +122,17 @@ export function PrdCard({ prd, streaming }: Props) {
               ))}
             </ul>
           </Section>
+        )}
+
+        {!streaming && prd.title && (
+          <RefineInput
+            onSubmit={onRefine}
+            onCancel={onCancelRefine}
+            busy={busy}
+            isRefiningThis={isRefiningThis}
+            label="Refine PRD"
+            placeholder="Tell it what to change. e.g. 'add a non-goal about mobile' or 'tighten the acceptance criteria'."
+          />
         )}
       </CardContent>
     </Card>

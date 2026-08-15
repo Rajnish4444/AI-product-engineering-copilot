@@ -8,12 +8,17 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CopyButton } from "./copy-button";
+import { RefineInput } from "./refine-input";
 import { taskListToMarkdown } from "@/lib/plan/task-list-to-markdown";
 import type { TaskList, Task, Effort } from "@/lib/schemas/task-list.v1";
 
 interface Props {
   tasks: Partial<TaskList>;
   streaming: boolean;
+  busy: boolean;
+  isRefiningThis: boolean;
+  onRefine: (feedback: string) => void;
+  onCancelRefine: () => void;
 }
 
 const effortLabel: Record<Effort, string> = {
@@ -36,7 +41,14 @@ function countEfforts(list: (Task | undefined)[]): { S: number; M: number; L: nu
   return c;
 }
 
-export function TaskListCard({ tasks, streaming }: Props) {
+export function TaskListCard({
+  tasks,
+  streaming,
+  busy,
+  isRefiningThis,
+  onRefine,
+  onCancelRefine,
+}: Props) {
   const list = (tasks.tasks ?? []) as (Task | undefined)[];
   const efforts = countEfforts(list);
 
@@ -122,6 +134,17 @@ export function TaskListCard({ tasks, streaming }: Props) {
             </div>
           );
         })}
+
+        {!streaming && list.length > 0 && (
+          <RefineInput
+            onSubmit={onRefine}
+            onCancel={onCancelRefine}
+            busy={busy}
+            isRefiningThis={isRefiningThis}
+            label="Refine tasks"
+            placeholder="Tell it what to change. e.g. 'split the auth task' or 'reduce the export task to M'."
+          />
+        )}
       </CardContent>
     </Card>
   );

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PRD } from "@/lib/schemas/prd.v1";
 import type { TaskList } from "@/lib/schemas/task-list.v1";
-import { streamPlan } from "@/lib/plan/client-reader";
+import { streamPlan, streamRefine } from "@/lib/plan/client-reader";
 import {
   generateSessionId,
   getSession,
@@ -23,6 +23,8 @@ export type PlanStatus =
   | "done"
   | "error";
 
+export type ActiveOp = null | "plan" | "refine_prd" | "refine_tasks";
+
 const emptyCost = { input: 0, output: 0, usd: 0 };
 const DEFAULT_PROVIDER = "google";
 const DEFAULT_MODEL = "gemini-2.5-flash";
@@ -36,6 +38,7 @@ export function ChatWorkspace() {
   const [cost, setCost] = useState(emptyCost);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeOp, setActiveOp] = useState<ActiveOp>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   // Persist a snapshot whenever meaningful state changes.
@@ -87,6 +90,7 @@ export function ChatWorkspace() {
     setCost(emptyCost);
     setError(null);
     setStatus("generating_prd");
+    setActiveOp("plan");
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -109,11 +113,11 @@ export function ChatWorkspace() {
             setStatus("done");
             break;
           case "session.usage":
-            setCost({
-              input: event.input_tokens,
-              output: event.output_tokens,
-              usd: event.estimated_usd,
-            });
+            setCost((prev) => ({
+              input: prev.input + event.input_tokens,
+              output: prev.output + event.output_tokens,
+              usd: prev.usd + event.estimated_usd,
+            }));
             break;
           case "error":
             setError(event.message);
@@ -124,14 +128,125 @@ export function ChatWorkspace() {
     } catch (err) {
       if (controller.signal.aborted) {
         setStatus("idle");
+        setActiveOp(null);
         return;
       }
       setError(err instanceof Error ? err.message : "Network error");
       setStatus("error");
     } finally {
       abortRef.current = null;
+      setActiveOp(null);
     }
   }, [idea]);
+
+  const handleRefinePrd = useCallback(
+    async (feedback: string) => {
+      if (!prd) return;
+      setError(null);
+      setStatus("generating_prd");
+      setActiveOp("refine_prd");
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        for await (const event of streamRefine(
+          { target: "prd", feedback, currentPrd: prd as PRD },
+          controller.signal
+        )) {
+          switch (event.type) {
+            case "prd.partial":
+              setPrd(event.data);
+              break;
+            case "prd.complete":
+              setPrd(event.data);
+              setStatus(tasks ? "done" : "done");
+              break;
+            case "session.usage":
+              setCost((prev) => ({
+                input: prev.input + event.input_tokens,
+                output: prev.output + event.output_tokens,
+                usd: prev.usd + event.estimated_usd,
+              }));
+              break;
+            case "error":
+              setError(event.message);
+              setStatus("error");
+              break;
+          }
+        }
+      } catch (err) {
+        if (controller.signal.aborted) {
+          setStatus("done");
+          setActiveOp(null);
+          return;
+        }
+        setError(err instanceof Error ? err.message : "Network error");
+        setStatus("error");
+      } finally {
+        abortRef.current = null;
+        setActiveOp(null);
+      }
+    },
+    [prd, tasks]
+  );
+
+  const handleRefineTasks = useCallback(
+    async (feedback: string) => {
+      if (!tasks) return;
+      setError(null);
+      setStatus("generating_tasks");
+      setActiveOp("refine_tasks");
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        for await (const event of streamRefine(
+          {
+            target: "tasks",
+            feedback,
+            currentPrd: (prd as PRD) ?? null,
+            currentTasks: tasks as TaskList,
+          },
+          controller.signal
+        )) {
+          switch (event.type) {
+            case "tasks.partial":
+              setTasks(event.data);
+              break;
+            case "tasks.complete":
+              setTasks(event.data);
+              setStatus("done");
+              break;
+            case "session.usage":
+              setCost((prev) => ({
+                input: prev.input + event.input_tokens,
+                output: prev.output + event.output_tokens,
+                usd: prev.usd + event.estimated_usd,
+              }));
+              break;
+            case "error":
+              setError(event.message);
+              setStatus("error");
+              break;
+          }
+        }
+      } catch (err) {
+        if (controller.signal.aborted) {
+          setStatus("done");
+          setActiveOp(null);
+          return;
+        }
+        setError(err instanceof Error ? err.message : "Network error");
+        setStatus("error");
+      } finally {
+        abortRef.current = null;
+        setActiveOp(null);
+      }
+    },
+    [prd, tasks]
+  );
 
   const handleCancel = useCallback(() => {
     abortRef.current?.abort();
@@ -161,7 +276,15 @@ export function ChatWorkspace() {
             status={status}
             error={error}
           />
-          <ArtifactViewer prd={prd} tasks={tasks} status={status} />
+          <ArtifactViewer
+            prd={prd}
+            tasks={tasks}
+            status={status}
+            activeOp={activeOp}
+            onRefinePrd={handleRefinePrd}
+            onRefineTasks={handleRefineTasks}
+            onCancelRefine={handleCancel}
+          />
         </div>
       </div>
     </div>
