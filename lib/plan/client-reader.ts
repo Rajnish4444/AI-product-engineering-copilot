@@ -4,27 +4,39 @@
  */
 
 import type { PlanEvent } from "./orchestrator";
+import type { PRD } from "@/lib/schemas/prd.v1";
+import type { TaskList } from "@/lib/schemas/task-list.v1";
+import type { RefineTarget } from "./refine-orchestrator";
 
 export interface PlanRequest {
   idea: string;
   provider?: string;
 }
 
-export async function* streamPlan(
-  input: PlanRequest,
+export interface RefineRequest {
+  target: RefineTarget;
+  feedback: string;
+  currentPrd?: PRD | null;
+  currentTasks?: TaskList | null;
+  provider?: string;
+}
+
+async function* streamNdjson(
+  url: string,
+  body: unknown,
   signal?: AbortSignal
 ): AsyncGenerator<PlanEvent> {
-  const res = await fetch("/api/plan", {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
     signal,
   });
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
+    const text = await res.text().catch(() => "");
     throw new Error(
-      `Plan request failed (${res.status}): ${body || res.statusText}`
+      `${url} failed (${res.status}): ${text || res.statusText}`
     );
   }
   if (!res.body) {
@@ -49,7 +61,7 @@ export async function* streamPlan(
         try {
           yield JSON.parse(line) as PlanEvent;
         } catch {
-          console.warn("[plan-reader] malformed event:", line);
+          console.warn("[stream-reader] malformed event:", line);
         }
       }
     }
@@ -63,4 +75,18 @@ export async function* streamPlan(
   } finally {
     reader.releaseLock();
   }
+}
+
+export function streamPlan(
+  input: PlanRequest,
+  signal?: AbortSignal
+): AsyncGenerator<PlanEvent> {
+  return streamNdjson("/api/plan", input, signal);
+}
+
+export function streamRefine(
+  input: RefineRequest,
+  signal?: AbortSignal
+): AsyncGenerator<PlanEvent> {
+  return streamNdjson("/api/refine", input, signal);
 }
